@@ -1,4 +1,4 @@
-package kuncwlr1_0;
+package kuncwlr;
 
 public class Page {
 	private String page;

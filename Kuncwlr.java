@@ -1,4 +1,4 @@
-package kuncwlr1_0;
+package kuncwlr;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;

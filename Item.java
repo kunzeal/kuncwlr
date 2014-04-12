@@ -1,4 +1,4 @@
-package kuncwlr1_0;
+package kuncwlr;
 import java.net.URL;
 
 //as the download goal
