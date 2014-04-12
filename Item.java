@@ -6,10 +6,17 @@ import java.net.URL;
 public class Item {
 	private Link link;
 	private String file;
+	private int portNo = 80;
 	
 	public Item(Link link, String file){
 		this.setLink(link);
 		this.setFile(file);
+	}
+	
+	public Item(Link link, String file, int portNo){
+		this.setLink(link);
+		this.setFile(file);
+		this.setPortNo(portNo);
 	}
 
 	public Link getLink() {
@@ -30,6 +37,14 @@ public class Item {
 	
 	public String toString(){
 		return link.toString()+file;
+	}
+
+	public int getPortNo() {
+		return portNo;
+	}
+
+	public void setPortNo(int portNo) {
+		this.portNo = portNo;
 	}
 
 }

@@ -11,30 +11,32 @@ import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.Queue;
 
 public class Download {
 	private Socket so;
-	private int portNo = 80;
 	private StringBuilder sb = new StringBuilder();
 	private PrintWriter out;
 	private BufferedReader in;
-	private Item item;
+	private Queue<Item> lq;
+	private Item currentItem;
 	
-	public static void main(String [] args){
-		Item item = new Item(new Link("www.baidu.com"), "/");
-		Download down = new Download(item);
-		Page page = down.downOps();
-		System.out.println(page.toString());
-	}
+//	public static void main(String [] args){
+//		Item item = new Item(new Link("221.130.120.178"), "/info/cm/ah/serviceInfo.html", 8080);
+//		Download down = new Download(item);
+//		Page page = down.downOps();
+//		System.out.println(page.toString());
+//	}
 	
 	
-	public Download(Item item){
-		this.item = item;
+	public Download(Queue<Item> lq){
+		this.lq = lq;
 	}
 	
 	public Page downOps(){
 		String str = "";
 		try {
+			getItemfromQueue();
 			conn();
 			str = download();
 			disconn();
@@ -46,11 +48,15 @@ public class Download {
 		return new Page(str);
 	}
 	
+	public Item getItemfromQueue(){
+		this.currentItem =  lq.remove();
+		return currentItem;
+	}
 	
 	//socket connect
 	public Socket conn() throws UnknownHostException, IOException{
 		//create Socket
-		so = new Socket(item.getLink().toString(), portNo);
+		so = new Socket(currentItem.getLink().toString(), currentItem.getPortNo());
 		out = new PrintWriter(new BufferedOutputStream(so.getOutputStream()));
 		in = new BufferedReader(new InputStreamReader(so.getInputStream()));
 		
@@ -60,7 +66,7 @@ public class Download {
 	//download page
 	//get method and return String
 	public String download(){
-		out.println("GET "+ item.getFile() + " HTTP/1.0\r\n");
+		out.println("GET "+ currentItem.getFile() + " HTTP/1.0\r\n");
 		out.println("Accept:text/plaint, text/html, text/*, */*\r\n:w");
 		out.println("\r\n");
 		out.flush();
@@ -68,8 +74,8 @@ public class Download {
 		String str;
 		try {
 			while((str = in.readLine())!=null){
-				sb.append(str);
-				System.out.println(str);
+				sb.append(str+"\n");
+//				System.out.println(str);
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -90,4 +96,6 @@ public class Download {
 		}
 		return true;
 	}
+	
+
 }
