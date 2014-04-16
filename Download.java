@@ -2,14 +2,10 @@ package kuncwlr;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.ConnectException;
-import java.net.MalformedURLException;
 import java.net.Socket;
-import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Queue;
 
@@ -56,7 +52,7 @@ public class Download {
 	//socket connect
 	public Socket conn() throws UnknownHostException, IOException{
 		//create Socket
-		so = new Socket(currentItem.getLink().toString(), currentItem.getPortNo());
+		so = new Socket(currentItem.getHost().toString(), currentItem.getPortNo());
 		out = new PrintWriter(new BufferedOutputStream(so.getOutputStream()));
 		in = new BufferedReader(new InputStreamReader(so.getInputStream()));
 		
@@ -74,7 +70,7 @@ public class Download {
 		String str;
 		try {
 			while((str = in.readLine())!=null){
-				sb.append(str+"\n");
+				sb.append(str);
 //				System.out.println(str);
 			}
 		} catch (IOException e) {

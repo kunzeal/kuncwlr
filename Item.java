@@ -1,30 +1,30 @@
 package kuncwlr;
-import java.net.URL;
 
 //as the download goal
-//including link, file..
+//including host, file..
 public class Item {
-	private Link link;
+	private Host host;
 	private String file;
 	private int portNo = 80;
+	private int type = Constants.UriTypesCons.URI_TYPE_ABSOLUTE_WS;
 	
-	public Item(Link link, String file){
-		this.setLink(link);
+	public Item(Host host, String file){
+		this.setHost(host);
 		this.setFile(file);
 	}
 	
-	public Item(Link link, String file, int portNo){
-		this.setLink(link);
+	public Item(Host host, String file, int portNo){
+		this.setHost(host);
 		this.setFile(file);
 		this.setPortNo(portNo);
 	}
-
-	public Link getLink() {
-		return link;
+	
+	public Host getHost() {
+		return host;
 	}
 
-	public void setLink(Link link) {
-		this.link = link;
+	public void setHost(Host host) {
+		this.host = host;
 	}
 
 	public String getFile() {
@@ -36,7 +36,7 @@ public class Item {
 	}
 	
 	public String toString(){
-		return link.toString()+file;
+		return host.toString()+file;
 	}
 
 	public int getPortNo() {
@@ -46,11 +46,12 @@ public class Item {
 	public void setPortNo(int portNo) {
 		this.portNo = portNo;
 	}
-
+	
 }
 
-class Link {
-	public Link(String host){
+class Host {
+	//host should't with http or '/' and should be clean
+	public Host(String host){
 		this.host = host;
 	}
 	private String host;
