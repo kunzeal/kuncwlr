@@ -30,7 +30,6 @@ public class htmlparserExtractor implements HTMLExtractor{
 			e.printStackTrace();
 			System.out.println("set encoding error!!");
 		}
-		System.out.println(page.toString());
 		Pattern ptn = Pattern.compile("<html[\\s\\S]*>[\\s\\S]*</html>");
 		Matcher m = ptn.matcher(page.toString());
 //		if(!m.matches()){
@@ -61,19 +60,14 @@ public class htmlparserExtractor implements HTMLExtractor{
 			return null;
 		}
 		int length = nodelist.size();
-		System.out.println("%%%%%%%%%%%%%extraction results%%%%%%%%%%%%%%%%");
 		Set<String> uriset = new HashSet<String>();
-		System.out.println("adding!!");
 		for(int i = 0;i<length;i++){
-			System.out.println(nodelist.elementAt(i).toHtml());
 			LinkTag n = (LinkTag)nodelist.elementAt(i);
 			uriset.add(n.getAttribute("href"));
 			if(n.getAttribute("href") == ""){
 				continue;
 			}
-			System.out.println("href is:"+n.getAttribute("href"));
 		}
-		System.out.println("added!!");
 		
 		return uriset;
 	}
