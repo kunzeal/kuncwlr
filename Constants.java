@@ -21,10 +21,10 @@ public class Constants {
 		//absolute uri with scheme
 		public static final Pattern PATTERN_ABSOLUTE_WS =
 				Pattern.compile("\\bhttps?://([-A-Za-z0-9.:]+)(/[-A-Za-z0-9+&@#/%=~_|!:,.;]*)?(\\?[A-Za-z0-9+&@#/%=~_|!:,.;]*)?");
-		//absolute uri with no scheme
+		//absolute uri with no scheme and no host, or just absolute directory from host root
 		//here is a problem such as /////
 		public static final Pattern PATTERN_ABSOLUTE_NS =
-				Pattern.compile("\\b/(/[-A-Za-z0-9+&@#/%=~_|!:,.;]*)?(\\?[A-Za-z0-9+&@#/%=~_|!:,.;]*)?");
+				Pattern.compile("(/[-A-Za-z0-9+&@#/%=~_|!:,.;]*)+(\\?[A-Za-z0-9+&@#/%=~_|!:,.;]*)?");
 		
 		//split 1
 		public static final Pattern PATTERN_EXT_ABS_WS_HOST = Pattern.compile("https?://|/|:");
