@@ -7,15 +7,19 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 
-public class Download {
+public class Download implements Callable<String>{
 	private Socket so;
 	private StringBuilder sb = new StringBuilder();
 	private PrintWriter out;
 	private BufferedReader in;
 	private Queue<Item> lq;
 	private Item currentItem;
+	private EndingStatus es;
+	private Map<Item, Page> map;
 	
 //	public static void main(String [] args){
 //		Item item = new Item(new Link("221.130.120.178"), "/info/cm/ah/serviceInfo.html", 8080);
@@ -25,8 +29,10 @@ public class Download {
 //	}
 	
 	
-	public Download(Queue<Item> lq){
+	public Download(Queue<Item> lq, Map<Item, Page> map, EndingStatus es){
 		this.lq = lq;
+		this.map = map;
+		this.es = es;
 	}
 	
 	public Page downOps(){
@@ -71,7 +77,6 @@ public class Download {
 		try {
 			while((str = in.readLine())!=null){
 				sb.append(str);
-//				System.out.println(str);
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -93,5 +98,40 @@ public class Download {
 		return true;
 	}
 	
+	@Override
+	public String call() throws InterruptedException{
+		
+//		while(!lq.isEmpty()){
+//			downOps();
+//		}
+		for(int i = 0; i!=5;i++){
+			System.out.println(i+" time");
+			synchronized (lq) {
+				if(lq.isEmpty())
+				{
+					System.out.println("lq wait");
+					lq.wait();
+					System.out.println("lq notified");
+				}
+			}
+			currentItem = lq.peek();
+			System.out.println("downloading:"+currentItem.toString()+" port:"+currentItem.getPortNo());
+			Page p = downOps();
+			System.out.println("downloaded");
+			map.put(this.currentItem, p);
+			synchronized(map){
+				if(!map.isEmpty()){
+					map.notify();
+				}
+			}
+			System.out.println("<<<<<<<<<<<<<");
+			System.out.println("Item:"+currentItem.toString());
+			System.out.println("Content:"+p.toString());
+			System.out.println(">>>>>>>>>>>>>");
+		}
+		
+		
+		return "finished";
+	}
 
 }
