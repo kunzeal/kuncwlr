@@ -1,7 +1,6 @@
 package kuncwlr;
 
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class URIOperations {
 	public static Item getItem(Item srcItem, String uri){
@@ -17,26 +16,26 @@ public class URIOperations {
 			sa = Constants.RegexSet.PATTERN_EXT_ABS_WS_PORT.split(uri);
 			int port = Integer.parseInt(sa[1]);
 			if(host.equals(srcItem.getHost().toString()))
-				return new Item(srcItem.getHost(), file, port);
-			return new Item(new Host(host), file, port);
+				return Item.getNewInstance(srcItem.getHost(), port, file, srcItem.getDeepth()+1);
+			return Item.getNewInstance(new Host(host), port, file, srcItem.getDeepth()+1);
 		}
 		//absolute uri with no scheme
 		else if(type == Constants.UriTypesCons.URI_TYPE_ABSOLUTE_NS){
-			return new Item(srcItem.getHost(), uri);
+			return Item.getNewInstance(srcItem.getHost(), srcItem.getPortNo(), uri, srcItem.getDeepth()+1);
 		}
 		//relative uri
 		else if(type == Constants.UriTypesCons.URI_TYPE_RELATIVE){
 			String currentDir = srcItem.getFile();
 			if(currentDir.endsWith("/")){
 				//end with slash
-				return new Item(srcItem.getHost(), srcItem.getFile()+uri, srcItem.getPortNo());
+				return Item.getNewInstance(srcItem.getHost(), srcItem.getPortNo(), srcItem.getFile()+uri, srcItem.getDeepth()+1);
 			}else
 			{
 				//end not end with slash
 				Matcher m = Constants.RegexSet.PATTERN_EXT_REL_NENDS_DIR.matcher(srcItem.getFile());
 				m.find();
 				currentDir = m.group();
-				return new Item(srcItem.getHost(),currentDir+uri, srcItem.getPortNo());
+				return Item.getNewInstance(srcItem.getHost(), srcItem.getPortNo(), currentDir+uri, srcItem.getDeepth()+1);
 			}
 		} 
 //		return new Item(new Host("221.130.120.178"), "/info/cm/ah/"+uri, 8080);

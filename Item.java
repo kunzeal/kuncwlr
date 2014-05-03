@@ -1,22 +1,63 @@
 package kuncwlr;
 
+import java.util.HashSet;
+import java.util.Set;
+
 //as the download goal
 //including host, file..
 public class Item {
 	private Host host;
 	private String file;
 	private int portNo = 80;
-	private int type = Constants.UriTypesCons.URI_TYPE_ABSOLUTE_WS;
+	private int deepth = 0;
+//	private int type = Constants.UriTypesCons.URI_TYPE_ABSOLUTE_WS;
+	private static Set<String> itemSet = new HashSet<String>();
 	
-	public Item(Host host, String file){
+	public static Item getNewInstance(Host host, String file){
+		if(!check(host, file, 80)){
+			return new Item(host, file);
+		}
+		return null;
+	}
+	public static Item getNewInstance(Host host, String file, int deepth){
+		if(!check(host, file, 80)){
+			return new Item(host, file, deepth);
+		}
+		return null;
+	}
+	
+	public static Item getNewInstance(Host host, int portNo, String file, int deepth){
+		if(!check(host, file, portNo)){
+			return new Item(host, file, portNo, deepth);
+		}
+		return null;
+	}
+	
+	public static synchronized boolean check(Host host,String file,int port){
+		String itemStr = host.toString()+":"+port+file;
+		if(itemSet.contains(itemStr)){
+			return true;
+		}
+		itemSet.add(itemStr);
+		return false;
+	}
+	
+	private Item(Host host, String file){
 		this.setHost(host);
 		this.setFile(file);
 	}
 	
-	public Item(Host host, String file, int portNo){
+	private Item(Host host, String file, int deepth){
+		this.setHost(host);
+		this.setFile(file);
+		this.deepth = deepth;
+	}
+	
+	private Item(Host host, String file, int portNo, int deepth){
 		this.setHost(host);
 		this.setFile(file);
 		this.setPortNo(portNo);
+		this.deepth = deepth;
 	}
 	
 	public Host getHost() {
@@ -45,6 +86,10 @@ public class Item {
 
 	public void setPortNo(int portNo) {
 		this.portNo = portNo;
+	}
+	
+	public int getDeepth(){
+		return deepth;
 	}
 	
 }
