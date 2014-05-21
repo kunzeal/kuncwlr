@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Queue;
@@ -17,6 +19,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.xml.stream.FactoryConfigurationError;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.params.HttpParamConfig;
 
 public class Download implements Callable<String>{
 	private Socket so;
@@ -28,6 +43,10 @@ public class Download implements Callable<String>{
 	private EndingStatus es;
 	private Map<Item, Page> map;
 	private Logger downLog;
+	private CloseableHttpClient hc;
+	private RequestConfig reqConfig;
+	private final int ConnTimeout = 1000;
+	private final int SocTimeout = 1000;
 	
 	public static void main(String [] args){
 //		Item item = Item.getNewInstance(new Host("221.130.120.178"), 8088, "/self/self_logon.jsp", 0);
@@ -55,75 +74,77 @@ public class Download implements Callable<String>{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+		reqConfig = RequestConfig.custom()
+				.setSocketTimeout(SocTimeout)
+				.setConnectTimeout(ConnTimeout)
+				.build();
+		hc = HttpClients.createDefault();
 	}
 	
 	public Page downOps(){
 		String str = "";
 		if(lq.isEmpty())return null;
+		getItemfromQueue();
 		try {
-			getItemfromQueue();
-			conn();
 			str = download();
-			disconn();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			downLog.info("downOps clientP... exception");
 			return null;
 		} catch (IOException e) {
-			e.printStackTrace();
+			// TODO Auto-generated catch block
+			downLog.info("downOps IOException");
 			return null;
 		}
 		return new Page(str);
 	}
 	
+	//get item from queue and remove it
 	public Item getItemfromQueue(){
 		this.currentItem =  lq.remove();
 		return currentItem;
 	}
 	
-	//socket connect
-	public Socket conn() throws UnknownHostException, IOException{
-		//create Socket
-		so = new Socket();
-		SocketAddress saddr = new InetSocketAddress(currentItem.getHost().toString(), currentItem.getPortNo());
-		so.connect(saddr, 1000);
-		out = new PrintWriter(new BufferedOutputStream(so.getOutputStream()));
-		in = new BufferedReader(new InputStreamReader(so.getInputStream()));
-		
-		return so;
-	}
 	
 	//download page
 	//get method and return String
-	public String download(){
-		out.println("GET "+ currentItem.getFile() + " HTTP/1.0\r\n");
-		out.println("Accept:text/plaint, text/html\r\n:w");
-		out.println("\r\n");
-		out.flush();
-		
+	public String download() throws ClientProtocolException, IOException{
+		URI uri;
+		try {
+			uri = new URIBuilder().setScheme("http")
+				.setPath(currentItem.getFile())
+				.setHost(currentItem.getHost().toString())
+				.setPort(currentItem.getPortNo())
+				.build();
+		} catch (URISyntaxException e) {
+			//error in Item
+			return null;
+		}
+		HttpGet hg = new HttpGet(uri);
+		hg.setConfig(reqConfig);
+		CloseableHttpResponse response = hc.execute(hg);
+		StringBuilder sb = new StringBuilder();
 		String str;
 		try {
-			while((str = in.readLine())!=null){
+			HttpEntity entity = response.getEntity();
+			BufferedReader in = new BufferedReader(new InputStreamReader(entity.getContent()));
+			while((str=in.readLine())!=null){
 				sb.append(str);
 			}
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalStateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}finally{
+			response.close();
 		}
-		
-		
+		downLog.info("sb"+sb.toString());
 		return sb.toString();
-	}
-	
-	public boolean disconn(){
-		try {
-			so.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return false;
-		}
-		return true;
 	}
 	
 	@Override
@@ -200,6 +221,7 @@ public class Download implements Callable<String>{
 			Page p = downOps();
 			downLog.info("downloaded");
 			if(p == null) continue;
+			downLog.info("Page"+p.toString());
 			map.put(this.currentItem, p);
 			synchronized(map){
 				if(!map.isEmpty()){
