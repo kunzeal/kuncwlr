@@ -74,5 +74,9 @@ public class Constants {
 		String [] sa = Constants.RegexSet.PATTERN_EXT_ABS_WS_PORT.split(tmpuri);
 		System.out.println(sa[1]);
 		*/
+		
+		/*
+		 * test abs with scheme
+		 */
 	}
 }

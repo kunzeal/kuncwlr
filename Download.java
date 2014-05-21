@@ -5,11 +5,18 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.Callable;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.xml.stream.FactoryConfigurationError;
 
 public class Download implements Callable<String>{
 	private Socket so;
@@ -20,23 +27,40 @@ public class Download implements Callable<String>{
 	private Item currentItem;
 	private EndingStatus es;
 	private Map<Item, Page> map;
+	private Logger downLog;
 	
-//	public static void main(String [] args){
-//		Item item = new Item(new Link("221.130.120.178"), "/info/cm/ah/serviceInfo.html", 8080);
+	public static void main(String [] args){
+//		Item item = Item.getNewInstance(new Host("221.130.120.178"), 8088, "/self/self_logon.jsp", 0);
 //		Download down = new Download(item);
 //		Page page = down.downOps();
 //		System.out.println(page.toString());
-//	}
+	}
 	
 	
 	public Download(Queue<Item> lq, Map<Item, Page> map, EndingStatus es){
 		this.lq = lq;
 		this.map = map;
 		this.es = es;
+		downLog = Logger.getLogger("downLog");
+		try {
+//			FileHandler fh = new FileHandler("E:/searchEngine/log/downlog.log");
+			FileHandler fh = new FileHandler("/var/mylog/downlog.log");
+			fh.setLevel(Level.INFO);
+			fh.setFormatter(new MyLogFormatter());
+			downLog.addHandler(fh);
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public Page downOps(){
 		String str = "";
+		if(lq.isEmpty())return null;
 		try {
 			getItemfromQueue();
 			conn();
@@ -44,8 +68,10 @@ public class Download implements Callable<String>{
 			disconn();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
+			return null;
 		} catch (IOException e) {
 			e.printStackTrace();
+			return null;
 		}
 		return new Page(str);
 	}
@@ -58,7 +84,9 @@ public class Download implements Callable<String>{
 	//socket connect
 	public Socket conn() throws UnknownHostException, IOException{
 		//create Socket
-		so = new Socket(currentItem.getHost().toString(), currentItem.getPortNo());
+		so = new Socket();
+		SocketAddress saddr = new InetSocketAddress(currentItem.getHost().toString(), currentItem.getPortNo());
+		so.connect(saddr, 1000);
 		out = new PrintWriter(new BufferedOutputStream(so.getOutputStream()));
 		in = new BufferedReader(new InputStreamReader(so.getInputStream()));
 		
@@ -69,7 +97,7 @@ public class Download implements Callable<String>{
 	//get method and return String
 	public String download(){
 		out.println("GET "+ currentItem.getFile() + " HTTP/1.0\r\n");
-		out.println("Accept:text/plaint, text/html, text/*, */*\r\n:w");
+		out.println("Accept:text/plaint, text/html\r\n:w");
 		out.println("\r\n");
 		out.flush();
 		
@@ -104,34 +132,84 @@ public class Download implements Callable<String>{
 //		while(!lq.isEmpty()){
 //			downOps();
 //		}
-		for(int i = 0; i!=5;i++){
-			System.out.println(i+" time");
-			synchronized (lq) {
-				if(lq.isEmpty())
-				{
-					System.out.println("lq wait");
-					lq.wait();
-					System.out.println("lq notified");
+		int i = 0;
+		while(true){
+//			if(i == 30){
+//				downLog.info("i down finished");
+//				es.downloadPause();
+//				return "finished";
+//			}
+			i++;
+			downLog.info("down "+i);
+			
+			//end judge
+			if(lq.isEmpty()&&map.isEmpty()&&es.isExtractPaused()){
+				synchronized (lq) {
+					synchronized (map) {
+						if(lq.isEmpty()&&map.isEmpty()&&es.isExtractPaused()){
+							es.downloadPause();
+							map.notifyAll();
+							downLog.info("map notifyall");
+							downLog.info("down finished");
+							return "finished!";
+						}
+					}
 				}
 			}
+			
+			if(lq.isEmpty()){
+				synchronized (lq) {
+					if(lq.isEmpty()){
+						es.downloadPause();
+						downLog.info("lq wait d:"+(es.isDownloadPaused()?1:0)+" e:"+(es.isExtractPaused()?1:0)+" lq size:"+lq.size()+" map size:"+map.size());
+						if(es.isExtractPaused()&&lq.isEmpty()&&map.isEmpty()){
+							synchronized (map) {
+								if(map.isEmpty()&&es.isExtractPaused()){
+									es.downloadPause();
+									map.notifyAll();
+									downLog.info("map notifyall");
+								}
+							}
+							downLog.info("down finished");
+							return "finished!";
+						}
+						downLog.info("download lq wait");
+						lq.wait();
+						//检查extractor是否停止，若停止则跳出
+						if(lq.isEmpty()){
+							downLog.info("down finished");
+							return "finished!";
+						}
+						es.downloadResume();
+						downLog.info("lq notify d:"+(es.isDownloadPaused()?1:0)+"e:"+(es.isExtractPaused()?1:0));
+
+					}
+				}
+			}
+			
+			//termination condition
 			currentItem = lq.peek();
-			System.out.println("downloading:"+currentItem.toString()+" port:"+currentItem.getPortNo());
+			//之抓取到深度为1的连接
+			if(currentItem.getDeepth()>=3){
+				downLog.info("deepth >= 2");
+				lq.poll();
+				continue;
+			}
+			
+			downLog.info("downloading:"+currentItem.toString()+" port:"+currentItem.getPortNo()+" deepth "+currentItem.getDeepth());
 			Page p = downOps();
-			System.out.println("downloaded");
+			downLog.info("downloaded");
+			if(p == null) continue;
 			map.put(this.currentItem, p);
 			synchronized(map){
 				if(!map.isEmpty()){
 					map.notify();
+					downLog.info("map notify");
 				}
 			}
-			System.out.println("<<<<<<<<<<<<<");
-			System.out.println("Item:"+currentItem.toString());
-			System.out.println("Content:"+p.toString());
-			System.out.println(">>>>>>>>>>>>>");
 		}
 		
 		
-		return "finished";
 	}
 
 }

@@ -1,20 +1,24 @@
 package kuncwlr;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
 
 public class Mana {
 	
 //	public static void main(String [] args){
 //		Item item = Item.getNewInstance(new Host("221.130.120.178"), 8080, "/info/cm/ah/serviceInfo.html", 0);
-////		Item item = new Item(new Host("www.baidu.com"), "/");
+////		Item item = Item.getNewInstance(new Host("www.baidu.com"), "/", 0);
 //		HTMLExtractor xmlextractor = new htmlparserExtractor();
 //		Mana manager = new Mana(item, xmlextractor);
 //		manager.startDownload();
@@ -39,7 +43,7 @@ public class Mana {
 	
 	public static void main(String [] args){
 		Item item = Item.getNewInstance(new Host("221.130.120.178"), 8080, "/info/cm/ah/serviceInfo.html", 0);
-//		Item item = new Item(new Host("www.baidu.com"), "/");
+//		Item item = Item.getNewInstance(new Host("www.baidu.com"), 80, "/", 0);
 		HTMLExtractor xmlextractor = new htmlparserExtractor();
 		Mana manager = new Mana(item, xmlextractor);
 		
@@ -48,20 +52,51 @@ public class Mana {
 		Future<String> df = es.submit(manager.getDownload());
 		Future<String> ef = es.submit(manager.getExtractor());
 		
-		while(!df.isDone()||!ef.isDone()){
+//		while(!df.isDone()||!ef.isDone()){
+//		}
+//		try{
+//			Thread.sleep(10000);
+//		} catch(InterruptedException e){
+//			
+//		}
+		
+		try {
+			df.get();
+			ef.get();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		
 		es.shutdown();
 		
+		System.out.println("~~~~~~~~~~~~~~~result~~~~~~~~~~~~~~~");
+		System.out.println("lq size:"+manager.getLinkQueue().size());
+		System.out.println("map size:"+manager.getMap().size());
+		//print lq
 		Iterator<Item> itit = manager.getLinkQueue().iterator();
-		System.out.println("size:"+manager.getLinkQueue().size());
-		int i = 0;
+		System.out.println("lq contents:");
 		while(itit.hasNext()){
-			i++;
 			Item it = itit.next();
 			System.out.println(it.toString()+":"+it.getPortNo()+" deepth:"+it.getDeepth());
 		}
-		System.out.println("size:"+i);
+		//print map
+		System.out.println("map contents:");
+		Iterator<Entry<Item, Page>> itmap = manager.getMap().entrySet().iterator();
+		while(itmap.hasNext()){
+			Entry<Item, Page> en = itmap.next();
+			System.out.println("Item:"+en.getKey().toString());
+		}
+		//print map
+		System.out.println("map contents:");
+		itmap = manager.getExMap().entrySet().iterator();
+		while(itmap.hasNext()){
+			Entry<Item, Page> en = itmap.next();
+			System.out.println("Item:"+en.getKey().toString());
+		}
 	}
 	
 	private Queue<Item> lq = new LinkedList<Item>();
@@ -71,12 +106,25 @@ public class Mana {
 	private Item currentItem;
 	private Extractor extractor;
 	private EndingStatus es;
+	private Logger logger;
 	
 	public Mana(Item item, HTMLExtractor xmlextractor){
 		this.es = new EndingStatus();
 		this.down = new Download(lq, map, es);
 		lq.add(item);
 		this.extractor = new Extractor(map, extractedMap, lq, xmlextractor, es);
+		this.logger = Logger.getLogger("kunlog");
+		try {
+			FileHandler fh = new FileHandler("/var/mylog/kunlog.log");
+			fh.setFormatter(new MyLogFormatter());
+			logger.addHandler(fh);
+		} catch (SecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	
@@ -90,8 +138,14 @@ public class Mana {
 		return map;
 	}
 	
+	public Map<Item, Page> getExMap(){
+		return extractedMap;
+	}
+	
 	public void startExtract(){
-		this.extractor.extractingOps();
+		while(!map.isEmpty()){
+			this.extractor.extractingOps();
+		}
 	}
 	
 	public Download getDownload(){

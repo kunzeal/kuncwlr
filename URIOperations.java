@@ -12,9 +12,16 @@ public class URIOperations {
 			sa = Constants.RegexSet.PATTERN_EXT_ABS_WS_HOST.split(uri);
 			String host = sa[1];
 			sa = Constants.RegexSet.PATTERN_EXT_ABS_WS_FILE.split(uri);
-			String file = "/"+sa[1];
+			String file;
+			if(sa.length>1){
+				file = "/"+sa[1];
+			}else file = "/";
 			sa = Constants.RegexSet.PATTERN_EXT_ABS_WS_PORT.split(uri);
-			int port = Integer.parseInt(sa[1]);
+			int port;
+			if(sa.length>1&&sa[1].matches("[0-9]+")){
+				port = Integer.parseInt(sa[1]);
+			}
+			else port = 80;
 			if(host.equals(srcItem.getHost().toString()))
 				return Item.getNewInstance(srcItem.getHost(), port, file, srcItem.getDeepth()+1);
 			return Item.getNewInstance(new Host(host), port, file, srcItem.getDeepth()+1);
